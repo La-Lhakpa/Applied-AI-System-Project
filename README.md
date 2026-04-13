@@ -55,17 +55,6 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
-### Screenshots
-
-Sample terminal output from `python -m src.main` (ranked titles, scores, and scoring reasons):
-
-![Terminal output showing top song recommendations with scores and bulleted reasons](docs/terminal-recommendations.png)
-
-Top 5 recommendations for three example profiles (High-Energy Pop, Chill Lofi, Deep Intense Rock):
-
-![Terminal output showing top five songs per profile with scores](docs/terminal-three-profiles.png)
-
-### Running Tests
 
 Run the starter tests with:
 
@@ -85,7 +74,15 @@ Use this section to document the experiments you ran. For example:
 - What happened when you added tempo or valence to the score
 - How did your system behave for different types of users
 
----
+---Sample terminal output from `python -m src.main` (ranked titles, scores, and scoring reasons):
+
+![Terminal output showing top song recommendations with scores and bulleted reasons](docs/terminal-recommendations.png)
+
+Top 5 recommendations for three example profiles (High-Energy Pop, Chill Lofi, Deep Intense Rock):
+
+![Terminal output showing top five songs per profile with scores](docs/terminal-three-profiles.png)
+
+### Running Tests
 
 ## Limitations and Risks
 
@@ -109,8 +106,18 @@ Read and complete `model_card.md`:
 
 Write 1 to 2 paragraphs here about what you learned:
 
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+-Short profile comparisons
+Happy Pop ↔ High-Energy Pop — Winner switches from Sunrise City (happy + pop) to Gym Hero (intense + pop); mood label has to match or you lose a point.
+
+Happy Pop ↔ Chill Lofi — Totally different tops: pop/happy/mid energy vs lofi/chill/low energy. Spacewalk Thoughts can appear for lofi users on chill + calm energy without matching genre.
+
+Happy Pop ↔ Deep Intense Rock — Sunrise City-style picks vs Storm Runner first; Gym Hero can rank high for rock or intense pop when intense + high energy line up.
+
+High-Energy Pop ↔ Chill Lofi — Loud intense list vs quiet chill list; goals are opposite so the tops barely overlap.
+
+High-Energy Pop ↔ Deep Intense Rock — Same two leaders (Gym Hero, Storm Runner) but order swaps: genre decides which wins; tail is still “loud” songs getting mostly energy points.
+
+Chill Lofi ↔ Deep Intense Rock — Soft lofi/chill vs hard rock/intense; no blending—one profile at a time.
 
 
 ---
@@ -128,7 +135,7 @@ Give your recommender a name, for example:
 
 > VibeFinder 1.0
 
----
+---TriadTune 1.0 
 
 ## 2. Intended Use
 

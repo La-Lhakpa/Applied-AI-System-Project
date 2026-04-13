@@ -5,7 +5,7 @@
 Give your model a short, descriptive name.  
 Example: **VibeFinder 1.0**  
 
----
+---TriadTune 1.0 
 
 ## 2. Intended Use  
 
@@ -17,7 +17,9 @@ Prompts:
 - What assumptions does it make about the user  
 - Is this for real users or classroom exploration  
 
----
+--- It suggests a short ranked list from a small fixed song catalog.Each pick is chosen by adding points when the song’s genre and mood tags match what the user chose, and when the song’s energy number is close to the user’s target energy (with energy counting extra in your current setup).
+--It assumes the user can describe taste with one genre, one mood, and one energy level, and that those labels mean the same thing as the words stored in the song table. It also assumes energy is on a 0–1 scale and that closer is always better, even if someone might prefer “a little calmer” in real life.
+--This is for classroom exploration and reflection, not a production app. The catalog is tiny, the rules are simple on purpose. 
 
 ## 3. How the Model Works  
 
@@ -32,7 +34,7 @@ Prompts:
 
 Avoid code here. Pretend you are explaining the idea to a friend who does not program.
 
----
+---After every song has a total score, the system sorts from highest to lowest and shows the top few as recommendations. Songs can still rank fairly high if they only match well on energy, or on genre + energy without the “right” mood—because the rules add the pieces together instead of requiring all three to match perfectly.
 
 ## 4. Data  
 
@@ -45,7 +47,10 @@ Prompts:
 - Did you add or remove data  
 - Are there parts of musical taste missing in the dataset  
 
----
+---There are currently 20 songs in the catalog.
+---Genres include pop, indie pop, lofi, rock, metal, punk, jazz, classical, ambient, synthwave, EDM, hip hop, country, folk, reggae, Latin, soul, and a few others—a small mix 
+---I added new data with the old data
+---Yes. There is no listening history, no language or lyrics, no artist diversity at scale, and no fine-grained subgenres or regional styles
 
 ## 5. Strengths  
 
