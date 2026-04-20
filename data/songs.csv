@@ -1,22 +1,41 @@
 id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
-1,Sunrise City,Neon Echo,pop,happy,0.82,118,0.84,0.79,0.18
-2,Midnight Coding,LoRoom,lofi,chill,0.42,78,0.56,0.62,0.71
-3,Storm Runner,Voltline,rock,intense,0.91,152,0.48,0.66,0.10
-4,Library Rain,Paper Lanterns,lofi,chill,0.35,72,0.60,0.58,0.86
-5,Gym Hero,Max Pulse,pop,intense,0.93,132,0.77,0.88,0.05
-6,Spacewalk Thoughts,Orbit Bloom,ambient,chill,0.28,60,0.65,0.41,0.92
-7,Coffee Shop Stories,Slow Stereo,jazz,relaxed,0.37,90,0.71,0.54,0.89
-8,Night Drive Loop,Neon Echo,synthwave,moody,0.75,110,0.49,0.73,0.22
-9,Focus Flow,LoRoom,lofi,focused,0.40,80,0.59,0.60,0.78
-10,Rooftop Lights,Indigo Parade,indie pop,happy,0.76,124,0.81,0.82,0.35
-id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
-11,Dust Road Anthem,Harper Vale,country,uplifting,0.68,104,0.72,0.55,0.42
-12,Nocturne in Quiet Light,Elena Voss,classical,serene,0.22,68,0.55,0.28,0.95
-13,Block Party Cipher,Kai Zen,hip hop,playful,0.86,95,0.88,0.84,0.12
-14,Furnace Heart,Obsidian Coil,metal,aggressive,0.96,168,0.32,0.45,0.03
-15,Sunlit Harbor,Soca Breeze,reggae,euphoric,0.72,88,0.90,0.76,0.25
-16,Willow Creek Ballad,The Hollow Pines,folk,nostalgic,0.45,96,0.48,0.52,0.88
-17,Laser Bloom,Nova Grid,edm,dreamy,0.78,128,0.62,0.81,0.08
-18,Calle Luna,Maria Santos,latin,romantic,0.70,112,0.79,0.83,0.20
-19,Midnight Velvet,Solomon Keys,soul,melancholic,0.38,74,0.35,0.48,0.62
-20,Basement Anthem,Rotten Youth,punk,dark,0.88,178,0.41,0.58,0.06
+1,Blinding Lights,The Weeknd,pop,nostalgic,0.73,171,0.33,0.51,0.00
+2,Levitating,Dua Lipa,pop,playful,0.82,103,0.92,0.88,0.01
+3,As It Was,Harry Styles,pop,melancholic,0.73,174,0.66,0.52,0.34
+4,Flowers,Miley Cyrus,pop,uplifting,0.68,118,0.65,0.71,0.09
+5,God's Plan,Drake,hip hop,uplifting,0.45,77,0.36,0.75,0.03
+6,Sicko Mode,Travis Scott,hip hop,intense,0.73,155,0.45,0.83,0.00
+7,HUMBLE.,Kendrick Lamar,hip hop,aggressive,0.62,150,0.42,0.91,0.00
+8,Rich Flex,Drake & 21 Savage,hip hop,dark,0.55,96,0.20,0.78,0.06
+9,Bohemian Rhapsody,Queen,rock,dreamy,0.40,144,0.23,0.39,0.29
+10,Believer,Imagine Dragons,rock,intense,0.78,125,0.67,0.78,0.05
+11,Numb,Linkin Park,rock,moody,0.85,110,0.36,0.50,0.02
+12,Wake Me Up,Avicii,edm,uplifting,0.78,124,0.65,0.53,0.10
+13,Closer,The Chainsmokers,edm,romantic,0.52,95,0.66,0.75,0.41
+14,Titanium,David Guetta,edm,euphoric,0.78,126,0.60,0.55,0.04
+15,Riptide,Vance Joy,indie pop,romantic,0.58,102,0.62,0.59,0.59
+16,Cigarette Daydreams,Cage The Elephant,indie pop,nostalgic,0.59,100,0.55,0.62,0.45
+17,Electric Feel,MGMT,indie pop,dreamy,0.69,103,0.50,0.79,0.13
+18,Snowman,WYS,lofi,dreamy,0.30,70,0.45,0.65,0.85
+19,Aruarian Dance,Nujabes,lofi,serene,0.42,90,0.55,0.68,0.78
+20,Coffee,beabadoobee,lofi,chill,0.32,84,0.40,0.60,0.80
+21,Despacito,Luis Fonsi,latin,playful,0.81,89,0.84,0.66,0.21
+22,Tusa,Karol G,latin,playful,0.72,100,0.57,0.80,0.30
+23,Bichota,Karol G,latin,aggressive,0.81,95,0.65,0.78,0.10
+24,Midnight City,M83,synthwave,dreamy,0.74,105,0.34,0.59,0.05
+25,Nightcall,Kavinsky,synthwave,moody,0.55,124,0.10,0.65,0.18
+26,Take Five,Dave Brubeck,jazz,focused,0.43,174,0.52,0.44,0.45
+27,So What,Miles Davis,jazz,relaxed,0.32,137,0.41,0.55,0.62
+28,Ain't No Mountain High Enough,Marvin Gaye,soul,uplifting,0.68,117,0.85,0.67,0.35
+29,Adorn,Miguel,soul,romantic,0.62,100,0.74,0.78,0.20
+30,Old Town Road,Lil Nas X,country,playful,0.62,137,0.64,0.88,0.05
+31,Tennessee Whiskey,Chris Stapleton,country,romantic,0.40,100,0.43,0.50,0.42
+32,Skinny Love,Bon Iver,folk,melancholic,0.34,133,0.18,0.40,0.85
+33,The A Team,Ed Sheeran,folk,melancholic,0.45,84,0.35,0.50,0.78
+34,Master of Puppets,Metallica,metal,aggressive,0.95,212,0.23,0.38,0.00
+35,Chop Suey!,System of a Down,metal,aggressive,0.94,127,0.27,0.44,0.01
+36,Three Little Birds,Bob Marley,reggae,uplifting,0.55,145,0.85,0.78,0.32
+37,Could You Be Loved,Bob Marley,reggae,happy,0.65,104,0.84,0.82,0.10
+38,American Idiot,Green Day,punk,aggressive,0.92,189,0.65,0.46,0.00
+39,Clair de Lune,Claude Debussy,classical,serene,0.10,70,0.13,0.18,0.95
+40,Weightless,Marconi Union,ambient,serene,0.05,60,0.05,0.10,0.95
