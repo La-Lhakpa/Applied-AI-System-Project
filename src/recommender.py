@@ -40,12 +40,42 @@ class Recommender:
         self.songs = songs
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        scored = [(song, self._score(user, song)) for song in self.songs]
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return [song for song, _ in scored[:k]]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        return "\n".join(self._build_reasons(user, song))
+
+    def _score(self, user: UserProfile, song: Song) -> float:
+        score = 0.0
+        if song.genre.casefold() == user.favorite_genre.casefold():
+            score += GENRE_MATCH_POINTS
+        if song.mood.casefold() == user.favorite_mood.casefold():
+            score += MOOD_MATCH_POINTS
+        energy_sim = max(0.0, 1.0 - abs(song.energy - user.target_energy))
+        score += ENERGY_SIMILARITY_WEIGHT * energy_sim
+        if user.likes_acoustic and song.acousticness > 0.6:
+            score += 0.5
+        return score
+
+    def _build_reasons(self, user: UserProfile, song: Song) -> List[str]:
+        reasons: List[str] = []
+        if song.genre.casefold() == user.favorite_genre.casefold():
+            reasons.append(f'Genre matches your preference ("{user.favorite_genre}")')
+        else:
+            reasons.append(f'Genre mismatch: song="{song.genre}", you prefer="{user.favorite_genre}"')
+        if song.mood.casefold() == user.favorite_mood.casefold():
+            reasons.append(f'Mood matches your preference ("{user.favorite_mood}")')
+        else:
+            reasons.append(f'Mood mismatch: song="{song.mood}", you prefer="{user.favorite_mood}"')
+        energy_sim = max(0.0, 1.0 - abs(song.energy - user.target_energy))
+        reasons.append(
+            f"Energy similarity: {energy_sim:.2f} (song={song.energy:.2f}, target={user.target_energy:.2f})"
+        )
+        if user.likes_acoustic and song.acousticness > 0.6:
+            reasons.append(f"Acoustic preference satisfied (acousticness={song.acousticness:.2f})")
+        return reasons
 
 def load_songs(csv_path: str) -> List[Dict]:
     """
