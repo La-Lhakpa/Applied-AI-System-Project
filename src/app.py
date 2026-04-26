@@ -1,5 +1,5 @@
 """
-Streamlit interactive UI for TriadTune.
+Streamlit UI for TriadTune — Apple Music–inspired minimal layout.
 
 Run with:  streamlit run src/app.py
 """
@@ -11,8 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 
-from src.features import FeatureExtractor
-from src.pipeline import RecommendationPipeline
+from src.pipeline import RecommendationPipeline, RecommendationResult
 from src.recommender import Song, UserProfile, load_songs
 
 GENRES = [
@@ -27,6 +26,52 @@ MOODS = [
     "romantic", "melancholic", "dark",
 ]
 
+_ACCENT = "#FA233B"
+_MUTED = "#6E6E73"
+
+_CSS = f"""
+<style>
+.stApp {{
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+                 "Helvetica Neue", Arial, sans-serif;
+}}
+h1.triadtune {{
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 0;
+    font-size: 44px;
+}}
+p.triadtune-sub {{
+    color: {_MUTED};
+    margin-top: 4px;
+    font-size: 15px;
+}}
+.rank-num {{
+    color: {_ACCENT};
+    font-weight: 700;
+    font-size: 28px;
+    min-width: 44px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}}
+.song-title {{
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}}
+.song-meta {{
+    color: {_MUTED};
+    font-size: 13px;
+    margin-top: 2px;
+}}
+.row {{
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}}
+</style>
+"""
+
 
 @st.cache_data
 def get_songs() -> list:
@@ -34,37 +79,53 @@ def get_songs() -> list:
     return [Song(**s) for s in raw]
 
 
+def _render_row(rank: int, r: RecommendationResult) -> None:
+    with st.container(border=True):
+        col_info, col_score = st.columns([5, 2])
+        with col_info:
+            st.markdown(
+                f"""<div class="row">
+                    <span class="rank-num">{rank}</span>
+                    <div>
+                        <div class="song-title">{r.song.title}</div>
+                        <div class="song-meta">{r.song.artist} · {r.song.genre} · {r.song.mood}</div>
+                    </div>
+                </div>""",
+                unsafe_allow_html=True,
+            )
+        with col_score:
+            with st.expander(f"Score  {r.final_score:.2f}"):
+                st.markdown(
+                    f"**Content** `{r.content_score:.3f}`  \n"
+                    f"**Label** `{r.label_score:.3f}`  \n"
+                    f"**Energy** `{r.song.energy:.2f}`"
+                )
+                
+
+
 def main() -> None:
-    st.set_page_config(
-        page_title="TriadTune",
-        page_icon="🎵",
-        layout="wide",
+    st.set_page_config(page_title="TriadTune", page_icon="🎵", layout="centered")
+    st.markdown(_CSS, unsafe_allow_html=True)
+
+    st.markdown('<h1 class="triadtune">TriadTune</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="triadtune-sub">Personalized music recommendations</p>',
+        unsafe_allow_html=True,
     )
 
-    st.title("🎵 TriadTune — Personalized Music Recommender")
-    st.caption(
-        "Simulating how Spotify & TikTok predict what you'll love next  •  "
-        "Content-based + Label-based blended pipeline"
-    )
-
-    # ── Sidebar: taste profile ────────────────────────────────────────
     with st.sidebar:
-        st.header("🎧 Your Taste Profile")
-        genre = st.selectbox("Favorite Genre", GENRES)
-        mood = st.selectbox("Favorite Mood", MOODS)
-        energy = st.slider("Target Energy", 0.0, 1.0, 0.70, 0.05,
-                           help="0 = very mellow, 1 = maximum intensity")
-        likes_acoustic = st.checkbox("I prefer acoustic songs")
-        k = st.slider("Recommendations to show", 3, 10, 5)
+        st.markdown("### Your taste")
+        genre = st.selectbox("Genre", GENRES)
+        mood = st.selectbox("Mood", MOODS)
+        energy = st.slider("Energy", 0.0, 1.0, 0.70, 0.05)
+        likes_acoustic = st.checkbox("Prefer acoustic")
+        k = st.slider("Show", 3, 10, 5)
 
-        st.divider()
-        st.header("⚙️ Pipeline Settings")
-        blend_alpha = st.slider(
-            "Blend α  (content ←→ label)",
-            0.0, 1.0, 0.5, 0.05,
-            help="α=1.0 → pure audio-feature cosine similarity\nα=0.0 → pure genre/mood/energy label matching",
-        )
-        st.caption("α = 1.0 → pure audio features  |  α = 0.0 → pure labels")
+        with st.expander("Advanced"):
+            blend_alpha = st.slider(
+                "Content ↔ Label blend", 0.0, 1.0, 0.5, 0.05,
+                help="1.0 → pure audio similarity · 0.0 → pure genre/mood match",
+            )
 
     user = UserProfile(
         favorite_genre=genre,
@@ -77,72 +138,9 @@ def main() -> None:
     pipeline = RecommendationPipeline(songs, blend_alpha=blend_alpha)
     results = pipeline.run(user, k=k)
 
-    # ── Main layout: recommendations + explainer ──────────────────────
-    col_recs, col_edu = st.columns([2, 1])
-
-    with col_recs:
-        st.subheader(f"Top {k} Picks for You")
-        for i, r in enumerate(results, 1):
-            with st.container(border=True):
-                st.markdown(
-                    f"**{i}. {r.song.title}**  ·  "
-                    f"*{r.song.artist}*  ·  "
-                    f"`{r.song.genre}` / `{r.song.mood}`"
-                )
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Final Score", f"{r.final_score:.3f}")
-                c2.metric("Content (α)", f"{r.content_score:.3f}")
-                c3.metric("Label (1-α)", f"{r.label_score:.3f}")
-                c4.metric("Energy", f"{r.song.energy:.2f}")
-                with st.expander("Why this song?"):
-                    st.code(r.explanation, language=None)
-
-    with col_edu:
-        st.subheader("📖 How It Works")
-
-        with st.expander("1 · Content-Based Filtering", expanded=True):
-            st.markdown("""
-**Like Spotify's audio fingerprint model:**
-
-Each song is encoded as a 5-D vector:
-```
-[energy, valence, danceability, acousticness, tempo_norm]
-```
-Your preferences are mapped into the **same space** as a *taste vector*.
-We score every song with **cosine similarity** — songs whose vector "points in the same direction" as your taste rank highest.
-            """)
-
-        with st.expander("2 · Label-Based Filtering"):
-            st.markdown("""
-**Explicit preference matching:**
-```
-+1.0  if genre matches
-+1.0  if mood matches
-+2.0 × energy_similarity   (continuous, not binary)
-──────────────────────────
-max = 4.0  →  normalized to [0, 1]
-```
-This simulates early-stage recommendation when a user has just set up their profile and no listening history exists yet.
-            """)
-
-        with st.expander("3 · Blended Score"):
-            st.markdown(f"""
-**final = α · content + (1-α) · label**
-
-Current α = `{blend_alpha:.2f}`
-
-Real platforms blend many more signals:
-- Collaborative filtering (*"users like you liked…"*)
-- Recency & freshness boosts
-- Diversity re-ranking (avoid 5 identical songs)
-- Context signals (time of day, activity, device)
-            """)
-
-        with st.expander("🧭 Your Taste Vector"):
-            extractor = FeatureExtractor()
-            taste_vec = extractor.profile_vector(user)
-            for name, val in zip(FeatureExtractor.FEATURE_NAMES, taste_vec):
-                st.progress(float(val), text=f"`{name}`:  {val:.2f}")
+    st.markdown(f"### Top {k} for you")
+    for i, r in enumerate(results, 1):
+        _render_row(i, r)
 
 
 if __name__ == "__main__":
