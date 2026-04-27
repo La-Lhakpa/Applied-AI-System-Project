@@ -1,5 +1,5 @@
 """
-CLI demo for the TriadTune recommendation pipeline.
+CLI demo for the EchoMind recommendation pipeline.
 
 Runs four contrasting taste profiles through the blended pipeline and
 prints ranked results with decomposed scores, showing how different users
@@ -57,7 +57,7 @@ def main() -> None:
     songs = [Song(**s) for s in raw]
 
     print(f"\n{_WIDE}")
-    print("  TriadTune — Blended Recommendation Pipeline Demo")
+    print("  EchoMind — Blended Recommendation Pipeline Demo")
     print("  Signal mix: 50% content-based  +  50% label-based")
     print(_WIDE)
 

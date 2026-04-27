@@ -52,7 +52,9 @@ pip install -r requirements.txt
 3. Run the app:
 
 ```bash
-python -m src.main
+CLI: python -m src.main
+
+UI: streamlit run src/app.py
 ```
 
 
@@ -135,7 +137,7 @@ Give your recommender a name, for example:
 
 > VibeFinder 1.0
 
----TriadTune 1.0 
+---EchoMind 1.0 
 
 ## 2. Intended Use
 
@@ -225,4 +227,30 @@ A few sentences about what you learned:
 - What surprised you about how your system behaved
 - How did building this change how you think about real music recommenders
 - Where do you think human judgment still matters, even if the model seems "smart"
+
+---
+
+## Agentic Workflow Integration
+
+EchoMind now includes one integrated AI feature: an **agentic ranking policy** that runs
+inside `RecommendationPipeline.run()` (not as a standalone script).
+
+### What the policy uses
+
+- `UserProfile` defaults (genre, mood, target energy, acoustic preference)
+- Optional natural-language intent from Streamlit (examples: "calm coding mix", "high-energy workout")
+- Optional lightweight session feedback (`likes`, `skips`)
+
+### What the policy changes
+
+- Dynamic `blend_alpha` (content-vs-label weighting)
+- Optional hard filters (e.g., "only chill lofi")
+- Soft boosts for genre/mood/acousticness
+- Energy-proximity bonus around policy-adjusted target energy
+- Human-readable policy rationale added to each recommendation explanation
+
+### Deterministic fallback
+
+If no intent/feedback is provided, or if policy computation fails, the pipeline falls back to
+the baseline deterministic ranking behavior.
 
