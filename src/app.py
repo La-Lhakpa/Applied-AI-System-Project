@@ -21,50 +21,130 @@ _ACCENT = "#FA233B"
 _MUTED = "#6E6E73"
 _LOGO_PATH = Path(__file__).resolve().parent.parent / "assets" / "echomind-logo.png"
 
-_CSS = f"""
+_CARD_GRADIENTS = [
+    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+    "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+    "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+    "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+    "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
+    "linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)",
+    "linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)",
+    "linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)",
+    "linear-gradient(135deg, #fd7979 0%, #fecfef 100%)",
+    "linear-gradient(135deg, #30cfd0 0%, #667eea 100%)",
+]
+
+_MOOD_EMOJIS = {
+    "happy": "😊", "chill": "😌", "intense": "⚡", "moody": "🌙",
+    "focused": "🎯", "relaxed": "🌿", "energetic": "🔥", "melancholic": "💙",
+    "uplifting": "✨", "playful": "🎈", "nostalgic": "🌅", "romantic": "💖",
+    "dark": "🌑", "dreamy": "💫", "angry": "🎸", "peaceful": "🕊️",
+}
+
+_CSS = """
 <style>
-.stApp {{
+.stApp {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
                  "Helvetica Neue", Arial, sans-serif;
     background:
         radial-gradient(circle at 50% 108%, rgba(255, 119, 0, 0.92) 0%, rgba(255, 145, 0, 0.68) 18%, rgba(255, 175, 76, 0.22) 34%, rgba(255, 175, 76, 0.00) 48%),
         linear-gradient(180deg, #b8c4e4 0%, #ceb9d6 40%, #efc0ca 72%, #f6d5c3 100%);
     background-attachment: fixed;
-}}
-h1.echomind {{
+}
+h1.echomind {
     font-weight: 700;
     letter-spacing: -0.03em;
     margin-bottom: 0;
     font-size: 44px;
-}}
-p.echomind-sub {{
-    color: {_MUTED};
+    text-align: center;
+}
+p.echomind-sub {
+    color: #4a4f5e;
     margin-top: 4px;
     font-size: 15px;
-}}
-.rank-num {{
-    color: {_ACCENT};
-    font-weight: 700;
-    font-size: 28px;
-    min-width: 44px;
     text-align: center;
-    font-variant-numeric: tabular-nums;
-}}
-.song-title {{
-    font-size: 17px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-}}
-.song-meta {{
-    color: {_MUTED};
-    font-size: 13px;
-    margin-top: 2px;
-}}
-.row {{
+}
+h3.section-title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #1b1f2a !important;
+    margin: 28px 0 16px;
+}
+.song-card {
+    background: rgba(20, 16, 32, 0.72);
+    border-radius: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+    margin-bottom: 4px;
+}
+.card-art {
+    width: 100%;
+    padding-top: 100%;
+    position: relative;
+}
+.card-art-inner {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     align-items: center;
-    gap: 18px;
-}}
+    justify-content: center;
+    font-size: 60px;
+}
+.card-body {
+    padding: 14px 16px 16px;
+}
+.card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff !important;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+}
+.card-artist {
+    font-size: 13px;
+    color: rgba(255,255,255,0.6) !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+}
+.card-score {
+    font-size: 13px;
+    color: rgba(255,255,255,0.55) !important;
+    font-variant-numeric: tabular-nums;
+}
+.card-play {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #ffffff !important;
+    flex-shrink: 0;
+}
+/* love / pass button row */
+div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] .stButton > button {
+    width: 100%;
+    border-radius: 12px;
+    border: none;
+    font-size: 15px;
+    padding: 6px 0;
+    cursor: pointer;
+}
 .stApp .main h1,
 .stApp .main h2,
 .stApp .main h3,
@@ -72,32 +152,10 @@ p.echomind-sub {{
 .stApp .main p,
 .stApp .main div,
 .stApp .main span,
-.stApp .main li {{
-    color: #1b1f2a !important;
-}}
-p.echomind-sub,
-.song-meta {{
-    color: #2e3445 !important;
-}}
-@media (prefers-color-scheme: dark) {{
-    .stApp .main p,
-    .stApp .main label,
-    .stApp .main h1,
-    .stApp .main h2,
-    .stApp .main h3,
-    .stApp .main h4,
-    .stApp .main h5,
-    .stApp .main h6,
-    .stApp .main li,
-    .stApp .main span,
-    .stApp .main div {{
-        color: #1b1f2a !important;
-    }}
-    .stApp .main p.echomind-sub,
-    .stApp .main .song-meta {{
-        color: #2e3445 !important;
-    }}
-}}
+.stApp .main li {
+    color: #1b1f2a;
+}
+p.echomind-sub { color: #4a4f5e; }
 </style>
 """
 
@@ -108,27 +166,65 @@ def get_songs() -> list:
     return [Song(**s) for s in raw]
 
 
-def _render_row(rank: int, r: RecommendationResult) -> None:
-    with st.container(border=True):
-        col_info, col_score = st.columns([5, 2])
-        with col_info:
-            st.markdown(
-                f"""<div class="row">
-                    <span class="rank-num">{rank}</span>
-                    <div>
-                        <div class="song-title">{r.song.title}</div>
-                        <div class="song-meta">{r.song.artist} · {r.song.genre} · {r.song.mood}</div>
-                    </div>
-                </div>""",
-                unsafe_allow_html=True,
-            )
-        with col_score:
-            with st.expander(f"Score  {r.final_score:.2f}"):
+def _render_recommendations(results: list[RecommendationResult]) -> None:
+    if "loved" not in st.session_state:
+        st.session_state.loved = set()
+    if "passed" not in st.session_state:
+        st.session_state.passed = set()
+
+    chunk_size = 3
+    for row_start in range(0, len(results), chunk_size):
+        row = results[row_start : row_start + chunk_size]
+        cols = st.columns(len(row))
+        for col, (offset, r) in zip(cols, enumerate(row)):
+            rank = row_start + offset + 1
+            gradient = _CARD_GRADIENTS[(rank - 1) % len(_CARD_GRADIENTS)]
+            emoji = _MOOD_EMOJIS.get(r.song.mood, "🎵")
+            song_id = r.song.id
+            is_loved = song_id in st.session_state.loved
+            is_passed = song_id in st.session_state.passed
+            with col:
                 st.markdown(
-                    f"**Content** `{r.content_score:.3f}`  \n"
-                    f"**Label** `{r.label_score:.3f}`  \n"
-                    f"**Energy** `{r.song.energy:.2f}`"
+                    f"""<div class="song-card">
+                        <div class="card-art" style="background: {gradient};">
+                            <div class="card-art-inner">{emoji}</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-title">{r.song.title}</div>
+                            <div class="card-artist">{r.song.artist}</div>
+                            <div class="card-footer">
+                                <span class="card-score">{r.final_score:.2f}</span>
+                                <div class="card-play">▶</div>
+                            </div>
+                        </div>
+                    </div>""",
+                    unsafe_allow_html=True,
                 )
+                btn_love, btn_pass = st.columns(2)
+                with btn_love:
+                    love_label = "❤️ Loved" if is_loved else "🤍 Love"
+                    if st.button(love_label, key=f"love_{song_id}_{rank}", use_container_width=True):
+                        if is_loved:
+                            st.session_state.loved.discard(song_id)
+                        else:
+                            st.session_state.loved.add(song_id)
+                            st.session_state.passed.discard(song_id)
+                        st.rerun()
+                with btn_pass:
+                    pass_label = "✗ Passed" if is_passed else "✕ Pass"
+                    if st.button(pass_label, key=f"pass_{song_id}_{rank}", use_container_width=True):
+                        if is_passed:
+                            st.session_state.passed.discard(song_id)
+                        else:
+                            st.session_state.passed.add(song_id)
+                            st.session_state.loved.discard(song_id)
+                        st.rerun()
+                with st.expander(f"Details · {r.song.genre} · {r.song.mood}"):
+                    st.markdown(
+                        f"**Content** `{r.content_score:.3f}`  \n"
+                        f"**Label** `{r.label_score:.3f}`  \n"
+                        f"**Energy** `{r.song.energy:.2f}`"
+                    )
 
 
 def _render_subtitle(username: str) -> None:
@@ -180,6 +276,7 @@ def main() -> None:
     st.markdown(_CSS, unsafe_allow_html=True)
 
     st.markdown('<h1 class="echomind">EchoMind</h1>', unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
     if "saved_recommendations" not in st.session_state:
         st.session_state.saved_recommendations = {}
@@ -222,9 +319,8 @@ def main() -> None:
     feedback = SessionFeedback(likes=int(likes_count), skips=int(skips_count))
     results = pipeline.run(user, k=k, intent_text=intent_text, session_feedback=feedback)
 
-    st.markdown(f"### Top {k} for you")
-    for i, r in enumerate(results, 1):
-        _render_row(i, r)
+    st.markdown('<h3 class="section-title">Top Songs for You</h3>', unsafe_allow_html=True)
+    _render_recommendations(results)
 
     st.markdown("### Save recommendations")
     if username:
