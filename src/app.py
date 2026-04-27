@@ -5,6 +5,7 @@ Run with:  streamlit run src/app.py
 """
 
 import sys
+from html import escape
 from datetime import datetime
 from pathlib import Path
 
@@ -12,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 
-from src.agent_policy import SessionFeedback
+from src.agent_policy import AgentTrace, SessionFeedback
 from src.constants import GENRES, MOODS
 from src.pipeline import RecommendationPipeline, RecommendationResult
 from src.recommender import Song, UserProfile, load_songs
@@ -283,6 +284,51 @@ def _render_saved_recommendations(username: str) -> None:
         st.info("No saved recommendations yet for this username.")
 
 
+def _render_agent_trace(trace: AgentTrace) -> None:
+    policy_step = next((s for s in trace.steps if s.name == "policy_decision"), None)
+    guardrail_step = next((s for s in trace.steps if s.name == "guardrail_check"), None)
+    finalize_step = next((s for s in trace.steps if s.name == "finalize"), None)
+
+    alpha_display = "baseline"
+    confidence_display = "1.00"
+    fallback_display = "Yes" if trace.fallback_used else "No"
+    returned_display = "n/a"
+    if policy_step:
+        alpha_value = policy_step.metrics.get("adjusted_blend_alpha")
+        if isinstance(alpha_value, (int, float)):
+            alpha_display = f"{alpha_value:.2f}"
+        confidence_display = f"{policy_step.confidence:.2f}"
+    if finalize_step:
+        returned_value = finalize_step.metrics.get("returned_count")
+        requested_value = finalize_step.metrics.get("requested_k")
+        if isinstance(returned_value, int) and isinstance(requested_value, int):
+            returned_display = f"{returned_value}/{requested_value}"
+
+    st.markdown("#### Agent summary")
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Policy alpha", alpha_display)
+    s2.metric("Policy confidence", confidence_display)
+    s3.metric("Returned songs", returned_display)
+    s4.metric("Fallback used", fallback_display)
+    if guardrail_step and guardrail_step.metrics.get("relaxed_filters"):
+        st.info("Guardrail relaxed hard filters to keep enough candidate songs.")
+
+    with st.expander("Agent reasoning trace", expanded=False):
+        for idx, step in enumerate(trace.steps, 1):
+            st.markdown(
+                f"**{idx}. {step.name.replace('_', ' ').title()}**  \n"
+                f"{step.decision}  \n"
+                f"Confidence: `{step.confidence:.2f}`"
+            )
+            if step.metrics:
+                for key, value in step.metrics.items():
+                    st.caption(f"{key}: {value}")
+        if trace.final_rationale:
+            st.markdown(f"**Final rationale:** {trace.final_rationale}")
+        if trace.fallback_used:
+            st.warning("Fallback mode was used for this run.")
+
+
 def main() -> None:
     page_icon = str(_LOGO_PATH) if _LOGO_PATH.exists() else "🎵"
     st.set_page_config(page_title="EchoMind", page_icon=page_icon, layout="centered")
@@ -330,10 +376,17 @@ def main() -> None:
     songs = get_songs()
     pipeline = RecommendationPipeline(songs, blend_alpha=blend_alpha)
     feedback = SessionFeedback(likes=int(likes_count), skips=int(skips_count))
-    results = pipeline.run(user, k=k, intent_text=intent_text, session_feedback=feedback)
+    results, trace = pipeline.run(
+        user,
+        k=k,
+        intent_text=intent_text,
+        session_feedback=feedback,
+        return_trace=True,
+    )
 
     st.markdown('<h3 class="section-title">Top Songs for You</h3>', unsafe_allow_html=True)
     _render_recommendations(results)
+    _render_agent_trace(trace)
 
     st.markdown("### Save recommendations")
     if username:

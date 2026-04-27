@@ -31,7 +31,13 @@ from typing import List, Optional
 from collections.abc import Mapping
 
 from src.features import FeatureExtractor
-from src.agent_policy import PolicyDecision, SessionFeedback, decide_policy
+from src.agent_policy import (
+    AgentTrace,
+    PolicyDecision,
+    SessionFeedback,
+    TraceStep,
+    decide_policy,
+)
 from src.recommender import (
     ENERGY_SIMILARITY_WEIGHT,
     GENRE_MATCH_POINTS,
@@ -81,18 +87,35 @@ class RecommendationPipeline:
         k: int = 5,
         intent_text: Optional[str] = None,
         session_feedback: Optional[SessionFeedback | Mapping[str, int]] = None,
-    ) -> List[RecommendationResult]:
+        return_trace: bool = False,
+    ) -> List[RecommendationResult] | tuple[List[RecommendationResult], AgentTrace]:
         """Score songs, apply optional agentic policy, return top-k results."""
         feedback = self._normalize_feedback(session_feedback)
+        trace = AgentTrace()
+        trace.steps.append(
+            TraceStep(
+                name="input_normalization",
+                decision="Normalized session feedback into deterministic counters.",
+                confidence=1.0,
+                metrics={
+                    "likes": feedback.likes if feedback else 0,
+                    "skips": feedback.skips if feedback else 0,
+                },
+            )
+        )
         policy: Optional[PolicyDecision] = None
         policy_error = ""
         try:
-            policy = decide_policy(
+            policy_result = decide_policy(
                 user=user,
                 default_blend_alpha=self.blend_alpha,
                 intent_text=intent_text,
                 session_feedback=feedback,
+                return_trace=True,
             )
+            policy, policy_trace = policy_result
+            trace.steps.extend(policy_trace.steps)
+            trace.final_rationale = policy_trace.final_rationale
             if policy and policy.is_active:
                 logger.info(
                     "Running policy-aware ranking: alpha=%.3f intent_present=%s feedback_present=%s",
@@ -106,6 +129,15 @@ class RecommendationPipeline:
                 "Policy decision failed; using baseline ranking fallback.",
                 exc_info=exc,
             )
+            trace.fallback_used = True
+            trace.steps.append(
+                TraceStep(
+                    name="policy_decision",
+                    decision="Policy computation failed; using baseline fallback.",
+                    confidence=0.0,
+                    metrics={"error": exc.__class__.__name__},
+                )
+            )
 
         effective_alpha = policy.adjusted_blend_alpha if policy else self.blend_alpha
         label_user = UserProfile(
@@ -117,15 +149,32 @@ class RecommendationPipeline:
         taste_vec = self._extractor.profile_vector(user)
         content_scores = rank_by_similarity(taste_vec, self._song_vectors)
         label_scores = self._compute_label_scores(label_user)
+        trace.steps.append(
+            TraceStep(
+                name="candidate_scoring",
+                decision="Computed content and label scores for candidate songs.",
+                confidence=1.0,
+                metrics={
+                    "candidate_count": len(self._songs),
+                    "effective_alpha": round(effective_alpha, 3),
+                    "target_energy": round(label_user.target_energy, 3),
+                },
+            )
+        )
 
         results: List[RecommendationResult] = []
+        dropped_by_filters = 0
+        total_policy_adjustment = 0.0
         for i, song in enumerate(self._songs):
             if not self._passes_hard_filters(song, policy):
+                dropped_by_filters += 1
                 continue
             cs = content_scores[i]
             ls = label_scores[i]
             base_final = effective_alpha * cs + (1.0 - effective_alpha) * ls
             policy_adjust = self._policy_adjustment(song, policy, label_user.target_energy)
+            policy_adjust = max(-0.25, min(0.25, policy_adjust))
+            total_policy_adjustment += policy_adjust
             final = base_final + policy_adjust
             explanation = self._explain(
                 user=user,
@@ -150,14 +199,104 @@ class RecommendationPipeline:
                 )
             )
 
+        trace.steps.append(
+            TraceStep(
+                name="policy_application",
+                decision="Applied hard filters and bounded policy score adjustments.",
+                confidence=policy.confidence if policy else 1.0,
+                metrics={
+                    "dropped_by_filters": dropped_by_filters,
+                    "remaining_candidates": len(results),
+                    "avg_policy_adjustment": round(
+                        (total_policy_adjustment / len(results)) if results else 0.0,
+                        4,
+                    ),
+                },
+            )
+        )
+
+        guardrail_decision = "No guardrail intervention required."
+        guardrail_metrics: dict[str, float | int | str | bool] = {
+            "required_k": k,
+            "candidate_count": len(results),
+            "relaxed_filters": False,
+        }
+        if policy and len(results) < k and (policy.hard_mood_filters or policy.hard_genre_filters):
+            relaxed_moods = len(policy.hard_mood_filters)
+            relaxed_genres = len(policy.hard_genre_filters)
+            policy.hard_mood_filters = set()
+            policy.hard_genre_filters = set()
+            results = []
+            total_policy_adjustment = 0.0
+            for i, song in enumerate(self._songs):
+                cs = content_scores[i]
+                ls = label_scores[i]
+                base_final = effective_alpha * cs + (1.0 - effective_alpha) * ls
+                policy_adjust = self._policy_adjustment(song, policy, label_user.target_energy)
+                policy_adjust = max(-0.25, min(0.25, policy_adjust))
+                total_policy_adjustment += policy_adjust
+                final = base_final + policy_adjust
+                explanation = self._explain(
+                    user=user,
+                    song=song,
+                    content_score=cs,
+                    label_score=ls,
+                    final_score=final,
+                    blend_alpha=effective_alpha,
+                    taste_vec=taste_vec,
+                    song_vec=self._song_vectors[i],
+                    policy=policy,
+                    policy_adjustment=policy_adjust,
+                    policy_error=policy_error,
+                )
+                results.append(
+                    RecommendationResult(
+                        song=song,
+                        content_score=cs,
+                        label_score=ls,
+                        final_score=final,
+                        explanation=explanation,
+                    )
+                )
+            policy.fallback_mode = "filter_relaxation"
+            trace.fallback_used = True
+            guardrail_decision = "Relaxed hard filters to ensure enough candidates."
+            guardrail_metrics = {
+                "required_k": k,
+                "candidate_count": len(results),
+                "relaxed_filters": True,
+                "relaxed_mood_filters": relaxed_moods,
+                "relaxed_genre_filters": relaxed_genres,
+            }
+
+        trace.steps.append(
+            TraceStep(
+                name="guardrail_check",
+                decision=guardrail_decision,
+                confidence=1.0,
+                metrics=guardrail_metrics,
+            )
+        )
+
         results.sort(key=lambda r: r.final_score, reverse=True)
+        trace.steps.append(
+            TraceStep(
+                name="finalize",
+                decision="Sorted candidates by final score and selected top-k recommendations.",
+                confidence=1.0,
+                metrics={"returned_count": len(results[:k]), "requested_k": k},
+            )
+        )
+        if not trace.final_rationale:
+            trace.final_rationale = policy.rationale if policy else "Baseline ranking retained."
         logger.info(
             "Recommendation run complete: returned=%d requested_k=%d policy_active=%s",
             len(results[:k]),
             k,
             bool(policy and policy.is_active),
         )
-        return results[:k]
+        top_results = results[:k]
+        return (top_results, trace) if return_trace else top_results
 
     # ------------------------------------------------------------------
     # Internal helpers
