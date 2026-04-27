@@ -43,6 +43,7 @@ _MOOD_EMOJIS = {
 
 _CSS = """
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
 .stApp {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
                  "Helvetica Neue", Arial, sans-serif;
@@ -63,6 +64,17 @@ p.echomind-sub {
     margin-top: 4px;
     font-size: 15px;
     text-align: center;
+}
+.username-highlight {
+    font-family: 'Great Vibes', cursive;
+    font-size: 2em;
+    font-weight: 400;
+    background: linear-gradient(135deg, #f5576c, #fa709a, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+    line-height: 1.1;
 }
 h3.section-title {
     font-size: 28px;
@@ -229,13 +241,14 @@ def _render_recommendations(results: list[RecommendationResult]) -> None:
 
 def _render_subtitle(username: str) -> None:
     display_name = username.strip()
-    subtitle = "Personalized music recommendations"
     if display_name:
-        subtitle = f"Personalized music recommendations for {display_name}"
-    st.markdown(
-        f'<p class="echomind-sub">{subtitle}</p>',
-        unsafe_allow_html=True,
-    )
+        body = (
+            f'Personalized music recommendations for '
+            f'<span class="username-highlight">{display_name}</span>'
+        )
+    else:
+        body = "Personalized music recommendations"
+    st.markdown(f'<p class="echomind-sub">{body}</p>', unsafe_allow_html=True)
 
 
 def _save_recommendation_snapshot(results: list[RecommendationResult]) -> dict:
