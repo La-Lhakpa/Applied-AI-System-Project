@@ -1,7 +1,7 @@
 import csv
 from dataclasses import dataclass
 from operator import itemgetter
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 @dataclass
 class Song:
@@ -48,12 +48,22 @@ class Recommender:
         return "\n".join(self._build_reasons(user, song))
 
     def _score(self, user: UserProfile, song: Song) -> float:
+        prefs = {
+            "genre": user.favorite_genre,
+            "mood": user.favorite_mood,
+            "energy": user.target_energy,
+        }
+        song_dict = {
+            "genre": song.genre,
+            "mood": song.mood,
+            "energy": song.energy,
+        }
+        genre_match, mood_match, energy_sim = _score_components(prefs, song_dict)
         score = 0.0
-        if song.genre.casefold() == user.favorite_genre.casefold():
+        if genre_match:
             score += GENRE_MATCH_POINTS
-        if song.mood.casefold() == user.favorite_mood.casefold():
+        if mood_match:
             score += MOOD_MATCH_POINTS
-        energy_sim = max(0.0, 1.0 - abs(song.energy - user.target_energy))
         score += ENERGY_SIMILARITY_WEIGHT * energy_sim
         if user.likes_acoustic and song.acousticness > 0.6:
             score += 0.5
@@ -133,6 +143,18 @@ def _energy_similarity(song_energy: float, target_energy: float) -> float:
     return max(0.0, 1.0 - abs(song_energy - target_energy))
 
 
+def _score_components(user_prefs: Dict, song: Dict) -> Tuple[bool, bool, float]:
+    """Shared primitive for genre/mood matches and energy similarity."""
+    user_genre, user_mood, target_energy = _prefs_genre_mood_energy(user_prefs)
+    song_genre = str(song["genre"])
+    song_mood = str(song["mood"])
+    song_energy = float(song["energy"])
+    genre_match = _norm_label(song_genre) == _norm_label(user_genre)
+    mood_match = _norm_label(song_mood) == _norm_label(user_mood)
+    energy_sim = _energy_similarity(song_energy, target_energy)
+    return genre_match, mood_match, energy_sim
+
+
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     """
     Scores a single song against user preferences.
@@ -144,23 +166,23 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     song_genre = str(song["genre"])
     song_mood = str(song["mood"])
     song_energy = float(song["energy"])
+    genre_match, mood_match, energy_sim = _score_components(user_prefs, song)
     score = 0.0
     reasons: List[str] = []
-    if _norm_label(song_genre) == _norm_label(user_genre):
+    if genre_match:
         score += GENRE_MATCH_POINTS
         reasons.append(f'Genre matches your preference ("{user_genre.strip()}")')
     else:
         reasons.append(
             f'Genre does not match (song is "{song_genre}", you prefer "{user_genre.strip()}")'
         )
-    if _norm_label(song_mood) == _norm_label(user_mood):
+    if mood_match:
         score += MOOD_MATCH_POINTS
         reasons.append(f'Mood matches your preference ("{user_mood.strip()}")')
     else:
         reasons.append(
             f'Mood does not match (song is "{song_mood}", you prefer "{user_mood.strip()}")'
         )
-    energy_sim = _energy_similarity(song_energy, target_energy)
     energy_points = ENERGY_SIMILARITY_WEIGHT * energy_sim
     score += energy_points
     reasons.append(

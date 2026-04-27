@@ -28,11 +28,6 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     return dot / (mag_a * mag_b)
 
 
-def euclidean_distance(a: List[float], b: List[float]) -> float:
-    """L2 distance — smaller means more similar."""
-    return math.sqrt(sum((x - y) ** 2 for x, y in zip(a, b)))
-
-
 def rank_by_similarity(
     taste_vector: List[float],
     song_vectors: List[List[float]],
