@@ -5,6 +5,7 @@ Run with:  streamlit run src/app.py
 """
 
 import sys
+from html import escape
 from datetime import datetime
 from pathlib import Path
 
@@ -12,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import streamlit as st
 
-from src.agent_policy import SessionFeedback
+from src.agent_policy import AgentTrace, SessionFeedback
 from src.constants import GENRES, MOODS
 from src.pipeline import RecommendationPipeline, RecommendationResult
 from src.recommender import Song, UserProfile, load_songs
@@ -64,17 +65,6 @@ p.echomind-sub {
     margin-top: 4px;
     font-size: 15px;
     text-align: center;
-}
-.username-highlight {
-    font-family: 'Great Vibes', cursive;
-    font-size: 2em;
-    font-weight: 400;
-    background: linear-gradient(135deg, #f5576c, #fa709a, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    display: inline-block;
-    line-height: 1.1;
 }
 h3.section-title {
     font-size: 28px;
@@ -242,13 +232,11 @@ def _render_recommendations(results: list[RecommendationResult]) -> None:
 def _render_subtitle(username: str) -> None:
     display_name = username.strip()
     if display_name:
-        body = (
-            f'Personalized music recommendations for '
-            f'<span class="username-highlight">{display_name}</span>'
-        )
-    else:
-        body = "Personalized music recommendations"
-    st.markdown(f'<p class="echomind-sub">{body}</p>', unsafe_allow_html=True)
+        subtitle = f"Personalized music recommendations for {display_name}"
+    st.markdown(
+        f'<p class="echomind-sub">{subtitle}</p>',
+        unsafe_allow_html=True,
+    )
 
 
 def _save_recommendation_snapshot(results: list[RecommendationResult]) -> dict:
@@ -281,6 +269,51 @@ def _render_saved_recommendations(username: str) -> None:
                 )
     else:
         st.info("No saved recommendations yet for this username.")
+
+
+def _render_agent_trace(trace: AgentTrace) -> None:
+    policy_step = next((s for s in trace.steps if s.name == "policy_decision"), None)
+    guardrail_step = next((s for s in trace.steps if s.name == "guardrail_check"), None)
+    finalize_step = next((s for s in trace.steps if s.name == "finalize"), None)
+
+    alpha_display = "baseline"
+    confidence_display = "1.00"
+    fallback_display = "Yes" if trace.fallback_used else "No"
+    returned_display = "n/a"
+    if policy_step:
+        alpha_value = policy_step.metrics.get("adjusted_blend_alpha")
+        if isinstance(alpha_value, (int, float)):
+            alpha_display = f"{alpha_value:.2f}"
+        confidence_display = f"{policy_step.confidence:.2f}"
+    if finalize_step:
+        returned_value = finalize_step.metrics.get("returned_count")
+        requested_value = finalize_step.metrics.get("requested_k")
+        if isinstance(returned_value, int) and isinstance(requested_value, int):
+            returned_display = f"{returned_value}/{requested_value}"
+
+    st.markdown("#### Agent summary")
+    s1, s2, s3, s4 = st.columns(4)
+    s1.metric("Policy alpha", alpha_display)
+    s2.metric("Policy confidence", confidence_display)
+    s3.metric("Returned songs", returned_display)
+    s4.metric("Fallback used", fallback_display)
+    if guardrail_step and guardrail_step.metrics.get("relaxed_filters"):
+        st.info("Guardrail relaxed hard filters to keep enough candidate songs.")
+
+    with st.expander("Agent reasoning trace", expanded=False):
+        for idx, step in enumerate(trace.steps, 1):
+            st.markdown(
+                f"**{idx}. {step.name.replace('_', ' ').title()}**  \n"
+                f"{step.decision}  \n"
+                f"Confidence: `{step.confidence:.2f}`"
+            )
+            if step.metrics:
+                for key, value in step.metrics.items():
+                    st.caption(f"{key}: {value}")
+        if trace.final_rationale:
+            st.markdown(f"**Final rationale:** {trace.final_rationale}")
+        if trace.fallback_used:
+            st.warning("Fallback mode was used for this run.")
 
 
 def main() -> None:
@@ -330,10 +363,17 @@ def main() -> None:
     songs = get_songs()
     pipeline = RecommendationPipeline(songs, blend_alpha=blend_alpha)
     feedback = SessionFeedback(likes=int(likes_count), skips=int(skips_count))
-    results = pipeline.run(user, k=k, intent_text=intent_text, session_feedback=feedback)
+    results, trace = pipeline.run(
+        user,
+        k=k,
+        intent_text=intent_text,
+        session_feedback=feedback,
+        return_trace=True,
+    )
 
     st.markdown('<h3 class="section-title">Top Songs for You</h3>', unsafe_allow_html=True)
     _render_recommendations(results)
+    _render_agent_trace(trace)
 
     st.markdown("### Save recommendations")
     if username:

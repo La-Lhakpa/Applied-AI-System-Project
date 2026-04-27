@@ -9,7 +9,7 @@ This module is intentionally lightweight and deterministic:
 
 from dataclasses import dataclass, field
 import logging
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, Union
 
 from src.constants import GENRES, MOODS
 from src.recommender import UserProfile
@@ -39,6 +39,27 @@ class PolicyDecision:
     energy_proximity_weight: float = 0.0
     rationale: str = "No policy adjustments."
     is_active: bool = False
+    confidence: float = 1.0
+    fallback_mode: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class TraceStep:
+    """One observable reasoning step for policy/planning."""
+
+    name: str
+    decision: str
+    confidence: float = 1.0
+    metrics: Dict[str, Union[float, int, str, bool]] = field(default_factory=dict)
+
+
+@dataclass
+class AgentTrace:
+    """End-to-end trace emitted by policy + pipeline."""
+
+    steps: list[TraceStep] = field(default_factory=list)
+    final_rationale: str = ""
+    fallback_used: bool = False
 
 
 _GENRES = {genre.casefold() for genre in GENRES}
@@ -54,7 +75,8 @@ def decide_policy(
     default_blend_alpha: float,
     intent_text: Optional[str] = None,
     session_feedback: Optional[SessionFeedback] = None,
-) -> PolicyDecision:
+    return_trace: bool = False,
+) -> PolicyDecision | tuple[PolicyDecision, AgentTrace]:
     """
     Create a deterministic ranking policy from intent + session context.
 
@@ -68,14 +90,42 @@ def decide_policy(
 
     has_intent = bool(text)
     has_feedback = (likes + skips) > 0
+    policy_trace = AgentTrace()
+    policy_trace.steps.append(
+        TraceStep(
+            name="input_signal_check",
+            decision="Checked for intent text and session feedback signals.",
+            confidence=1.0,
+            metrics={
+                "has_intent": has_intent,
+                "likes": likes,
+                "skips": skips,
+            },
+        )
+    )
+
     if not has_intent and not has_feedback:
         logger.info("Agentic policy inactive: no intent text and no session feedback.")
-        return PolicyDecision(
+        decision = PolicyDecision(
             adjusted_blend_alpha=base_alpha,
             target_energy=user.target_energy,
             rationale="No intent/session signal; baseline ranking retained.",
             is_active=False,
+            confidence=1.0,
         )
+        policy_trace.steps.append(
+            TraceStep(
+                name="policy_decision",
+                decision="No policy changes applied; baseline ranking retained.",
+                confidence=1.0,
+                metrics={
+                    "adjusted_blend_alpha": decision.adjusted_blend_alpha,
+                    "target_energy": decision.target_energy,
+                },
+            )
+        )
+        policy_trace.final_rationale = decision.rationale
+        return (decision, policy_trace) if return_trace else decision
 
     words = set(text.replace("-", " ").split())
     rationale_bits = []
@@ -136,6 +186,12 @@ def decide_policy(
         )
         active = True
 
+    confidence = 1.0
+    if has_intent and has_feedback:
+        confidence = 0.95
+    elif has_intent or has_feedback:
+        confidence = 0.9
+
     decision = PolicyDecision(
         adjusted_blend_alpha=alpha,
         target_energy=target_energy,
@@ -147,7 +203,24 @@ def decide_policy(
         energy_proximity_weight=energy_proximity_weight,
         rationale=" ".join(rationale_bits) if rationale_bits else "Policy computed with no-op adjustments.",
         is_active=active,
+        confidence=confidence,
     )
+    policy_trace.steps.append(
+        TraceStep(
+            name="policy_decision",
+            decision="Computed deterministic policy from intent and feedback.",
+            confidence=decision.confidence,
+            metrics={
+                "adjusted_blend_alpha": round(decision.adjusted_blend_alpha, 3),
+                "target_energy": round(decision.target_energy, 3),
+                "hard_genre_filters": len(decision.hard_genre_filters),
+                "hard_mood_filters": len(decision.hard_mood_filters),
+                "genre_boosts": len(decision.genre_boosts),
+                "mood_boosts": len(decision.mood_boosts),
+            },
+        )
+    )
+    policy_trace.final_rationale = decision.rationale
     logger.info(
         "Agentic policy computed: active=%s alpha=%.3f target_energy=%.3f "
         "hard_genres=%d hard_moods=%d genre_boosts=%d mood_boosts=%d feedback=(likes=%d,skips=%d)",
@@ -161,4 +234,4 @@ def decide_policy(
         likes,
         skips,
     )
-    return decision
+    return (decision, policy_trace) if return_trace else decision
