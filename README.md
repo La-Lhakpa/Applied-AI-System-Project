@@ -3,6 +3,9 @@
 ## Title and Summary
 EchoMind is a hybrid music recommendation system that ranks songs using both audio-feature similarity and explicit user preference matching. It matters because it demonstrates a core AI systems idea: combining interpretable rules with adaptive behavior can produce recommendations that are both understandable and useful. The project also shows how lightweight agentic policies can personalize rankings from intent and session feedback without requiring large-model retraining.
 
+##Link for the DEMO
+- https://www.loom.com/share/f374780fbd334954851f8425f9d2434e
+
 ## Original Project (Modules 1-3) and Initial Scope
 My original project from Modules 1-3 was the "Music Recommender Simulation". Its core goal was to recommend songs from a small catalog by matching each song against a user taste profile (genre, mood, target energy, and acoustic preference) using a transparent scoring rule. It could produce ranked top-k outputs with clear reasons, making it easy to inspect what the recommender got right or wrong.
 
@@ -11,26 +14,6 @@ At a high level, EchoMind takes a user profile, computes two ranking signals for
 - Content signal: cosine similarity in feature space (energy, tempo, valence, danceability, acousticness, etc.).
 - Label signal: deterministic genre/mood/energy match score.
 - Final ranking: `final = alpha * content + (1 - alpha) * label`, with optional policy adjustments.
-
-The system diagram in `src/pipeline.py` maps directly to this flow:
-
-```mermaid
-flowchart TD
-    userProfile[UserProfile] --> featureExtractor[FeatureExtractor]
-    songCatalog[SongCatalog] --> featureExtractor
-    featureExtractor --> tasteVector[TasteVector]
-    featureExtractor --> songVectors[SongVectors]
-    tasteVector --> contentScore[ContentSimilarity]
-    songVectors --> contentScore
-    userProfile --> labelScore[LabelScoring]
-    songCatalog --> labelScore
-    contentScore --> blendStage[BlendWithAlpha]
-    labelScore --> blendStage
-    intentAndFeedback[IntentAndSessionFeedback] --> policyDecision[AgentPolicyDecision]
-    policyDecision --> blendStage
-    blendStage --> rankedResults[SortAndTopK]
-    rankedResults --> explanations[HumanReadableExplanations]
-```
 
 In the current implementation:
 - `src/pipeline.py` orchestrates scoring, policy application, guardrails, and top-k selection.
