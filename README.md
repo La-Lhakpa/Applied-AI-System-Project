@@ -128,14 +128,7 @@ These outputs show that the system is functional and profile-sensitive: changing
 
 ## Testing Summary
 ### What worked
-- The CLI demo consistently produced ranked recommendations for contrasting user profiles.
-- The blended signal behaved as expected: close feature matches and label matches both improved rank.
-- The policy-integrated pipeline remained deterministic and traceable (including fallback and guardrail logic).
-
-### What did not fully work or remains limited
-- In this environment, `pytest` was not installed (`No module named pytest`), so I could not execute the automated tests during this specific run.
-- Performance and ranking quality are constrained by the small `data/songs.csv` catalog.
-- The policy is rule-based; it does not learn continuously from long-term behavior.
+- 22 out of 23 automated tests passed. The system struggled on one intent-driven reranking case (‘only chill lofi focus’), where expected top recommendation did not change as intended.
 
 ### What I learned from testing
 - Even simple scoring systems can produce believable personalization when feature engineering is coherent.
@@ -144,3 +137,14 @@ These outputs show that the system is functional and profile-sensitive: changing
 
 ## Reflection
 This project taught me that useful AI systems are not just about model sophistication; they are about making decisions observable, testable, and safe under edge cases. I learned how to decompose recommendation behavior into interpretable signals, then layer controlled adaptation on top with intent and session feedback. Most importantly, I saw that AI problem-solving is iterative: small, transparent design choices often produce stronger learning outcomes than jumping straight to black-box complexity.
+
+##What are the limitations or biases in your system?
+-The system is transparent and testable, but biased toward the labeling scheme and dataset coverage, and brittle to wording/weight choices due to deterministic rules.
+
+##Could your AI be misused, and how would you prevent that?
+-This AI can be misused through data manipulation. I mitigate this by input validation,bounded policy effects, guardrails/fallbacks, output logging, and transparency notices that prevent over-trust.
+
+##What surprised you while testing your AI's reliability?
+-The biggest surprise was the gap between apparent reliability (high pass rate, stable baseline) and intent robustness (one critical edge case still failing).It was when 22/23 tests passed but failed one where it didn't move the lofi song to the top as expected. 
+
+
