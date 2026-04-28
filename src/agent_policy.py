@@ -33,6 +33,7 @@ class PolicyDecision:
     target_energy: float
     hard_genre_filters: Set[str] = field(default_factory=set)
     hard_mood_filters: Set[str] = field(default_factory=set)
+    strict_filters: bool = False
     genre_boosts: Dict[str, float] = field(default_factory=dict)
     mood_boosts: Dict[str, float] = field(default_factory=dict)
     acoustic_boost: float = 0.0
@@ -137,6 +138,7 @@ def decide_policy(
     mood_boosts: Dict[str, float] = {}
     hard_genre_filters: Set[str] = set()
     hard_mood_filters: Set[str] = set()
+    strict_filters = False
     acoustic_boost = 0.0
     energy_proximity_weight = 0.0
 
@@ -149,6 +151,7 @@ def decide_policy(
                 active = True
                 if "only" in words:
                     hard_genre_filters.add(genre)
+                    strict_filters = True
                     rationale_bits.append(f"'only' detected -> hard genre filter '{genre}'.")
 
         for mood in _MOODS:
@@ -158,6 +161,7 @@ def decide_policy(
                 active = True
                 if "only" in words:
                     hard_mood_filters.add(mood)
+                    strict_filters = True
                     rationale_bits.append(f"'only' detected -> hard mood filter '{mood}'.")
 
         if words.intersection({"calm", "chill", "focus", "focused", "study", "relax", "relaxed"}):
@@ -197,6 +201,7 @@ def decide_policy(
         target_energy=target_energy,
         hard_genre_filters=hard_genre_filters,
         hard_mood_filters=hard_mood_filters,
+        strict_filters=strict_filters,
         genre_boosts=genre_boosts,
         mood_boosts=mood_boosts,
         acoustic_boost=acoustic_boost,
@@ -215,6 +220,7 @@ def decide_policy(
                 "target_energy": round(decision.target_energy, 3),
                 "hard_genre_filters": len(decision.hard_genre_filters),
                 "hard_mood_filters": len(decision.hard_mood_filters),
+                "strict_filters": decision.strict_filters,
                 "genre_boosts": len(decision.genre_boosts),
                 "mood_boosts": len(decision.mood_boosts),
             },

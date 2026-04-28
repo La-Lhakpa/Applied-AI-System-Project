@@ -246,6 +246,21 @@ def _render_recommendations(results: list[RecommendationResult]) -> None:
                             st.session_state.passed.add(song_id)
                             st.session_state.loved.discard(song_id)
                         st.rerun()
+                if st.button("Open", key=f"open_{song_id}_{rank}", use_container_width=True):
+                    st.session_state.selected_song = {
+                        "id": r.song.id,
+                        "title": r.song.title,
+                        "artist": r.song.artist,
+                        "genre": r.song.genre,
+                        "mood": r.song.mood,
+                        "energy": r.song.energy,
+                        "score": r.final_score,
+                        "content_score": r.content_score,
+                        "label_score": r.label_score,
+                        "emoji": emoji,
+                        "art_gradient": gradient,
+                    }
+                    st.switch_page("pages/apple_music.py")
                 with st.expander(f"Details · {r.song.genre} · {r.song.mood}"):
                     st.markdown(
                         f"**Content** `{r.content_score:.3f}`  \n"
@@ -358,6 +373,11 @@ def main() -> None:
     if "saved_recommendations" not in st.session_state:
         st.session_state.saved_recommendations = {}
 
+    if "loved" not in st.session_state:
+        st.session_state.loved = set()
+    if "passed" not in st.session_state:
+        st.session_state.passed = set()
+
     with st.sidebar:
         if _LOGO_PATH.exists():
             st.image(str(_LOGO_PATH), width=170)
@@ -381,6 +401,9 @@ def main() -> None:
             )
             likes_count = st.number_input("Session likes", min_value=0, value=0, step=1)
             skips_count = st.number_input("Session skips", min_value=0, value=0, step=1)
+            st.caption(
+                f"From Love/Pass: ❤️ {len(st.session_state.loved)} · ✕ {len(st.session_state.passed)}"
+            )
 
     _render_subtitle(username)
 
@@ -393,7 +416,10 @@ def main() -> None:
 
     songs = get_songs()
     pipeline = RecommendationPipeline(songs, blend_alpha=blend_alpha)
-    feedback = SessionFeedback(likes=int(likes_count), skips=int(skips_count))
+    feedback = SessionFeedback(
+        likes=len(st.session_state.loved) + int(likes_count),
+        skips=len(st.session_state.passed) + int(skips_count),
+    )
     results, trace = pipeline.run(
         user,
         k=k,

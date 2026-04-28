@@ -221,7 +221,12 @@ class RecommendationPipeline:
             "candidate_count": len(results),
             "relaxed_filters": False,
         }
-        if policy and len(results) < k and (policy.hard_mood_filters or policy.hard_genre_filters):
+        if (
+            policy
+            and len(results) < k
+            and (policy.hard_mood_filters or policy.hard_genre_filters)
+            and not policy.strict_filters
+        ):
             relaxed_moods = len(policy.hard_mood_filters)
             relaxed_genres = len(policy.hard_genre_filters)
             policy.hard_mood_filters = set()
