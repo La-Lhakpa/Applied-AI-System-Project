@@ -1,256 +1,146 @@
-# 🎵 Music Recommender Simulation
+# EchoMind: Intent-Aware Music Recommender
 
-## Project Summary
+## Title and Summary
+EchoMind is a hybrid music recommendation system that ranks songs using both audio-feature similarity and explicit user preference matching. It matters because it demonstrates a core AI systems idea: combining interpretable rules with adaptive behavior can produce recommendations that are both understandable and useful. The project also shows how lightweight agentic policies can personalize rankings from intent and session feedback without requiring large-model retraining.
 
-In this project you will build and explain a small music recommender system.
+## Original Project (Modules 1-3) and Initial Scope
+My original project from Modules 1-3 was the "Music Recommender Simulation". Its core goal was to recommend songs from a small catalog by matching each song against a user taste profile (genre, mood, target energy, and acoustic preference) using a transparent scoring rule. It could produce ranked top-k outputs with clear reasons, making it easy to inspect what the recommender got right or wrong.
 
-Your goal is to:
+## Architecture Overview
+At a high level, EchoMind takes a user profile, computes two ranking signals for every song, and blends them into one final score:
+- Content signal: cosine similarity in feature space (energy, tempo, valence, danceability, acousticness, etc.).
+- Label signal: deterministic genre/mood/energy match score.
+- Final ranking: `final = alpha * content + (1 - alpha) * label`, with optional policy adjustments.
 
-- Represent songs and a user "taste profile" as data
-- Design a scoring rule that turns that data into recommendations
-- Evaluate what your system gets right and wrong
-- Reflect on how this mirrors real world AI recommenders
+The system diagram in `src/pipeline.py` maps directly to this flow:
 
-Replace this paragraph with your own summary of what your version does.
+```mermaid
+flowchart TD
+    userProfile[UserProfile] --> featureExtractor[FeatureExtractor]
+    songCatalog[SongCatalog] --> featureExtractor
+    featureExtractor --> tasteVector[TasteVector]
+    featureExtractor --> songVectors[SongVectors]
+    tasteVector --> contentScore[ContentSimilarity]
+    songVectors --> contentScore
+    userProfile --> labelScore[LabelScoring]
+    songCatalog --> labelScore
+    contentScore --> blendStage[BlendWithAlpha]
+    labelScore --> blendStage
+    intentAndFeedback[IntentAndSessionFeedback] --> policyDecision[AgentPolicyDecision]
+    policyDecision --> blendStage
+    blendStage --> rankedResults[SortAndTopK]
+    rankedResults --> explanations[HumanReadableExplanations]
+```
 
----
+In the current implementation:
+- `src/pipeline.py` orchestrates scoring, policy application, guardrails, and top-k selection.
+- `src/agent_policy.py` computes deterministic policy decisions from optional intent text and likes/skips.
+- `src/app.py` exposes the flow in Streamlit and shows an agent reasoning trace.
 
-## How The System Works
-Explain your design in plain language.
-
-Some prompts to answer:
-
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
-
---- The system will be working on the basis of scoring and ranking rules. 
---- My UserProfile will have info's on favorite_genre,favorite_mood,target_energy,likes_acoustic.
----My Recommender compute a score:weighted sum of (genre match + mood match + energy closeness + acoustic preference), with energy as distance-to-target, and only add tempo/valence/danceability when you have a clear rule or extra profile fields.
----Score every candidate, sort by score descending, return the top k—and optionally post-process for ties, diversity, or exclusions.
-
-
-## Getting Started
-
-### Setup
-
-1. Create a virtual environment (optional but recommended):
-
+## Setup Instructions
+1. Clone and enter project folder
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate      # Mac or Linux
-   .venv\Scripts\activate         # Windows
+   git clone <your-repo-url>
+   cd Applied-AI-System-Project
+   ```
 
-2. Install dependencies
+2. Create and activate a virtual environment (recommended)
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+   On Windows:
+   ```bash
+   .venv\Scripts\activate
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+3. Install dependencies
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Run the app:
+4. Run the CLI demo
+   ```bash
+   python3 -m src.main
+   ```
 
-```bash
-CLI: python -m src.main
+5. Run the Streamlit app
+   ```bash
+   streamlit run src/app.py
+   ```
 
-UI: streamlit run src/app.py
-```
+6. Run tests
+   ```bash
+   pytest
+   ```
 
+## Sample Interactions
+The examples below come from actual CLI runs (`python3 -m src.main`) and show input profiles with resulting top recommendations.
 
-Run the starter tests with:
+### Example 1: Happy Pop Fan
+   Input
+- Genre: `pop`
+- Mood: `happy`
+- Target energy: `0.8`
+- Likes acoustic: `False`
 
-```bash
-pytest
-```
+   Output (Top 3)
+1. `Levitating` - score `0.848` (content `0.957`, label `0.740`)
+2. `As It Was` - score `0.841` (content `0.967`, label `0.715`)
+3. `Flowers` - score `0.840` (content `0.990`, label `0.690`)
 
-You can add more tests in `tests/test_recommender.py`.
+### Example 2: Chill Lofi Listener
+   Input
+- Genre: `lofi`
+- Mood: `chill`
+- Target energy: `0.4`
+- Likes acoustic: `True`
 
----
+   Output (Top 3)
+1. `Coffee` - score `0.969` (content `0.978`, label `0.960`)
+2. `Aruarian Dance` - score `0.865` (content `0.989`, label `0.740`)
+3. `Snowman` - score `0.829` (content `0.957`, label `0.700`)
 
-## Experiments You Tried
+### Example 3: High-Energy Rocker
+   Input
+- Genre: `rock`
+- Mood: `intense`
+- Target energy: `0.9`
+- Likes acoustic: `False`
 
-Use this section to document the experiments you ran. For example:
+   Output (Top 3)
+1. `Believer` - score `0.943` (content `0.946`, label `0.940`)
+2. `Numb` - score `0.841` (content `0.957`, label `0.725`)
+3. `Sicko Mode` - score `0.819` (content `0.973`, label `0.665`)
 
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+These outputs show that the system is functional and profile-sensitive: changing preferences shifts the top-ranked songs in meaningful ways.
 
----Sample terminal output from `python -m src.main` (ranked titles, scores, and scoring reasons):
+## Design Decisions and Trade-offs
+### Why I built it this way
+- I used a hybrid ranker (content + label) to keep the model both adaptive and explainable.
+- I integrated a deterministic agentic policy layer** so optional natural language intent and session feedback can influence ranking without making behavior opaque.
+- I added guardrails and fallback paths so strict filters do not return empty recommendation lists.
 
-![Terminal output showing top song recommendations with scores and bulleted reasons](docs/terminal-recommendations.png)
+### Trade-offs
+- Interpretability vs complexity: deterministic logic is easier to debug than deep models, but less expressive than learned embeddings from real user logs.
+- Small curated dataset vs realism: easier classroom experimentation, but limited coverage and diversity compared with production catalogs.
+- Fast iteration vs long-term personalization: session likes/skips are lightweight and practical, but they do not capture long-term user history.
 
-Top 5 recommendations for three example profiles (High-Energy Pop, Chill Lofi, Deep Intense Rock):
+## Testing Summary
+### What worked
+- The CLI demo consistently produced ranked recommendations for contrasting user profiles.
+- The blended signal behaved as expected: close feature matches and label matches both improved rank.
+- The policy-integrated pipeline remained deterministic and traceable (including fallback and guardrail logic).
 
-![Terminal output showing top five songs per profile with scores](docs/terminal-three-profiles.png)
+### What did not fully work or remains limited
+- In this environment, `pytest` was not installed (`No module named pytest`), so I could not execute the automated tests during this specific run.
+- Performance and ranking quality are constrained by the small `data/songs.csv` catalog.
+- The policy is rule-based; it does not learn continuously from long-term behavior.
 
-### Running Tests
-
-## Limitations and Risks
-
-Summarize some limitations of your recommender.
-
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
-
----
+### What I learned from testing
+- Even simple scoring systems can produce believable personalization when feature engineering is coherent.
+- Explanations are essential: seeing `content_score` and `label_score` side-by-side made debugging much faster.
+- Guardrails matter in recommendation systems because strict filters can otherwise reduce usefulness.
 
 ## Reflection
-
-Read and complete `model_card.md`:
-
-[**Model Card**](model_card.md)
-
-Write 1 to 2 paragraphs here about what you learned:
-
--Short profile comparisons
-Happy Pop ↔ High-Energy Pop — Winner switches from Sunrise City (happy + pop) to Gym Hero (intense + pop); mood label has to match or you lose a point.
-
-Happy Pop ↔ Chill Lofi — Totally different tops: pop/happy/mid energy vs lofi/chill/low energy. Spacewalk Thoughts can appear for lofi users on chill + calm energy without matching genre.
-
-Happy Pop ↔ Deep Intense Rock — Sunrise City-style picks vs Storm Runner first; Gym Hero can rank high for rock or intense pop when intense + high energy line up.
-
-High-Energy Pop ↔ Chill Lofi — Loud intense list vs quiet chill list; goals are opposite so the tops barely overlap.
-
-High-Energy Pop ↔ Deep Intense Rock — Same two leaders (Gym Hero, Storm Runner) but order swaps: genre decides which wins; tail is still “loud” songs getting mostly energy points.
-
-Chill Lofi ↔ Deep Intense Rock — Soft lofi/chill vs hard rock/intense; no blending—one profile at a time.
-
-
----
-
-## 7. `model_card_template.md`
-
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
-
-```markdown
-# 🎧 Model Card - Music Recommender Simulation
-
-## 1. Model Name
-
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
-
----EchoMind 1.0 
-
-## 2. Intended Use
-
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
-
----
-
-## 3. How It Works (Short Explanation)
-
-Describe your scoring logic in plain language.
-
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
-
-Try to avoid code in this section, treat it like an explanation to a non programmer.
-
----
-
-## 4. Data
-
-Describe your dataset.
-
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
-
----
-
-## 5. Strengths
-
-Where does your recommender work well
-
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
----
-
-## 6. Limitations and Bias
-
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
-
----
-
-## 7. Evaluation
-
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
-
----
-
-## 9. Personal Reflection
-
-A few sentences about what you learned:
-
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
-
----
-
-## Agentic Workflow Integration
-
-EchoMind now includes one integrated AI feature: an **agentic ranking policy** that runs
-inside `RecommendationPipeline.run()` (not as a standalone script).
-
-### What the policy uses
-
-- `UserProfile` defaults (genre, mood, target energy, acoustic preference)
-- Optional natural-language intent from Streamlit (examples: "calm coding mix", "high-energy workout")
-- Optional lightweight session feedback (`likes`, `skips`)
-
-### What the policy changes
-
-- Dynamic `blend_alpha` (content-vs-label weighting)
-- Optional hard filters (e.g., "only chill lofi")
-- Soft boosts for genre/mood/acousticness
-- Energy-proximity bonus around policy-adjusted target energy
-- Human-readable policy rationale added to each recommendation explanation
-
-### Deterministic fallback
-
-If no intent/feedback is provided, or if policy computation fails, the pipeline falls back to
-the baseline deterministic ranking behavior.
-
+This project taught me that useful AI systems are not just about model sophistication; they are about making decisions observable, testable, and safe under edge cases. I learned how to decompose recommendation behavior into interpretable signals, then layer controlled adaptation on top with intent and session feedback. Most importantly, I saw that AI problem-solving is iterative: small, transparent design choices often produce stronger learning outcomes than jumping straight to black-box complexity.
