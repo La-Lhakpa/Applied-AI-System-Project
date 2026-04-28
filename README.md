@@ -3,7 +3,7 @@
 ## Title and Summary
 EchoMind is a hybrid music recommendation system that ranks songs using both audio-feature similarity and explicit user preference matching. It matters because it demonstrates a core AI systems idea: combining interpretable rules with adaptive behavior can produce recommendations that are both understandable and useful. The project also shows how lightweight agentic policies can personalize rankings from intent and session feedback without requiring large-model retraining.
 
-##Link for the DEMO
+Link for the DEMO
 - https://www.loom.com/share/f374780fbd334954851f8425f9d2434e
 
 ## Original Project (Modules 1-3) and Initial Scope
